@@ -81,17 +81,34 @@ defmodule ExAws.Config.Defaults do
     |> Map.put(:host, host(service, region))
   end
 
-  @partitions [
-    {~r/^(us|eu|af|ap|sa|ca)\-\w+\-\d+$/, "aws"},
-    {~r/^cn\-\w+\-\d+$/, "aws-cn"},
-    {~r/^us\-gov\-\w+\-\d+$/, "aws-us-gov"}
+#  @partitions [
+#    {~r/^(us|eu|af|ap|sa|ca)\-\w+\-\d+$/, "aws"},
+#    {~r/^cn\-\w+\-\d+$/, "aws-cn"},
+#    {~r/^us\-gov\-\w+\-\d+$/, "aws-us-gov"}
+#  ]
+#
+#  def host(service, region) do
+#    partition =
+#      Enum.find(@partitions, fn {regex, _} ->
+#        Regex.run(regex, region)
+#      end)
+#
+#    with {_, partition} <- partition do
+#      do_host(partition, service, region)
+#    end
+#  end
+
+@partitions [
+    {["us-", "eu-", "af-", "ap-", "sa-", "ca-"], "aws"},
+    {["cn-"], "aws-cn"},
+    {["us-gov-"], "aws-us-gov"}
   ]
 
   def host(service, region) do
-    partition =
-      Enum.find(@partitions, fn {regex, _} ->
-        Regex.run(regex, region)
-      end)
+    [major, _] = String.split(region)
+    partition = Enum.find(@partitions, fn {region_list, _} ->
+      major in region_list
+    end)
 
     with {_, partition} <- partition do
       do_host(partition, service, region)
