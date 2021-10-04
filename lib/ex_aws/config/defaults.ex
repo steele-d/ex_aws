@@ -93,36 +93,30 @@ defmodule ExAws.Config.Defaults do
 #    end
 #  end
 
-  use Bitwise
-
-  @partitions [
-    {["us", "eu", "af", "ap", "sa", "ca"], "aws"},
-    {["cn"], "aws-cn"},
-    {["us-gov"], "aws-us-gov"}
-  ]
-
   def host(service, region) do
-    [country, area, zone] = case String.split(region, "-") do
-      [country, area, zone] -> [country, area, zone]
-      ["us", "gov", area, zone] -> ["us-gov", area, zone]
-      _ -> [nil, "", ""]
+    {partition, remainder} = case region do
+      "us-" <> remainder -> {"aws", remainder}
+      "eu-" <> remainder -> {"aws", remainder}
+      "af-" <> remainder -> {"aws", remainder}
+      "ap-" <> remainder -> {"aws", remainder}
+      "sa-" <> remainder -> {"aws", remainder}
+      "ca-" <> remainder -> {"aws", remainder}
+      "cn-" <> remainder -> {"aws-cn", remainder}
+      "us-gov-" <> remainder -> {"aws-us-gov", remainder}
+      _ -> {nil, region}
     end
 
-    # Am I certain that region only contains ASCII characters?
-    valid_area = Enum.all?(to_charlist(area), fn char ->
-      char in ?A..?Z or char in ?a..?z or char in ?0..?9 or char == ?_
-    end)
-
-    valid_zone = Enum.all?(to_charlist(zone), fn char ->
-      char in ?0..?9
-    end)
-
-    partition = if valid_area and valid_zone do
-      Enum.find(@partitions, fn {region_list, _} -> country in region_list end)
-    end
-
-    with {_, partition} <- partition do
-      do_host(partition, service, region)
+    if partition do
+      try do
+        [area, zone] = String.split(remainder, "-")
+        if (Enum.all?(to_charlist(area), fn char ->
+          char in ?a..?z or char in ?A..?Z or char in ?0..?9 or char === ?_
+        end) and Enum.all?(to_charlist(zone), fn char ->
+          char in ?0..?9
+        end)), do: do_host(partition, service, region)
+      rescue
+        _ -> nil
+      end
     end
   end
 
